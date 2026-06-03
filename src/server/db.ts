@@ -1,15 +1,26 @@
-import { createPool, type VercelPool } from "@vercel/postgres";
+import { Pool } from "pg";
 
-let _pool: VercelPool | null = null;
+let _pool: Pool | null = null;
 
-/** Lazily-created connection pool (Vercel Postgres / Neon). */
-export function db(): VercelPool {
+/** Lazily-created connection pool. Works with Supabase / any Postgres. */
+export function db(): Pool {
   if (!_pool) {
     const connectionString =
       process.env.POSTGRES_URL ||
       process.env.DATABASE_URL ||
-      process.env.POSTGRES_PRISMA_URL;
-    _pool = connectionString ? createPool({ connectionString }) : createPool();
+      process.env.POSTGRES_PRISMA_URL ||
+      process.env.POSTGRES_URL_NON_POOLING;
+    _pool = new Pool({
+      connectionString,
+      // Supabase (and most hosted Postgres) require TLS.
+      ssl:
+        connectionString && /sslmode=disable/.test(connectionString)
+          ? false
+          : { rejectUnauthorized: false },
+      max: 3,
+      idleTimeoutMillis: 10_000,
+      connectionTimeoutMillis: 15_000,
+    });
   }
   return _pool;
 }
