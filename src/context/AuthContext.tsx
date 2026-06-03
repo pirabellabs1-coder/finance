@@ -32,11 +32,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    auth.getCurrentUser().then((current) => {
-      if (!active) return;
-      setUser(current);
-      setStatus(current ? "authenticated" : "unauthenticated");
-    });
+    auth
+      .getCurrentUser()
+      .then((current) => {
+        if (!active) return;
+        setUser(current);
+        setStatus(current ? "authenticated" : "unauthenticated");
+      })
+      .catch(() => {
+        if (!active) return;
+        setUser(null);
+        setStatus("unauthenticated");
+      });
     return () => {
       active = false;
     };

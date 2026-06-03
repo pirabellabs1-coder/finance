@@ -94,14 +94,19 @@ export function PlanningProvider({ children }: { children: ReactNode }) {
       goalRepo.list(userId),
       recurringRepo.list(userId),
       notifRepo.getReadIds(userId),
-    ]).then(([b, g, r, ids]) => {
-      if (!active) return;
-      setBudget(b);
-      setGoals(g);
-      setRecurring(r);
-      setReadIds(ids);
-      setLoading(false);
-    });
+    ])
+      .then(([b, g, r, ids]) => {
+        if (!active) return;
+        setBudget(b);
+        setGoals(g);
+        setRecurring(r);
+        setReadIds(ids);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (!active) return;
+        setLoading(false);
+      });
     return () => {
       active = false;
     };

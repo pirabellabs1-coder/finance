@@ -67,6 +67,8 @@ export interface User {
   currency: CurrencyCode;
   /** Optional avatar as a data URL. */
   avatar?: string;
+  /** Whether the user opted in to email reminders & budget alerts. */
+  emailAlerts: boolean;
   createdAt: string;
 }
 
@@ -83,6 +85,7 @@ export interface ProfilePatch {
   lastName?: string;
   currency?: CurrencyCode;
   avatar?: string;
+  emailAlerts?: boolean;
 }
 
 // --- Phase 2: planning ------------------------------------------------------

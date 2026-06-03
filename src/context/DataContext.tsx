@@ -39,9 +39,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
       return;
     }
     setLoading(true);
-    const list = await repo.list(userId);
-    setItems(list);
-    setLoading(false);
+    try {
+      const list = await repo.list(userId);
+      setItems(list);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
 
   useEffect(() => {

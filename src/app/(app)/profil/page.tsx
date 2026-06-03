@@ -2,7 +2,8 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Check, LogOut, Trash2 } from "lucide-react";
+import { Camera, Check, LogOut, Mail, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -72,6 +73,10 @@ export default function ProfilePage() {
 
   const [confirmReset, setConfirmReset] = useState(false);
 
+  const [alertsSaving, setAlertsSaving] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryMsg, setSummaryMsg] = useState("");
+
   const handleAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -127,6 +132,30 @@ export default function ProfilePage() {
   const handleReset = async () => {
     await replaceAll([]);
     setConfirmReset(false);
+  };
+
+  const emailAlerts = user?.emailAlerts ?? true;
+  const toggleAlerts = async () => {
+    setAlertsSaving(true);
+    try {
+      await updateProfile({ emailAlerts: !emailAlerts });
+    } finally {
+      setAlertsSaving(false);
+    }
+  };
+
+  const sendSummary = async () => {
+    setSummaryMsg("");
+    setSummaryLoading(true);
+    try {
+      const res = await fetch("/api/email/summary", { method: "POST" });
+      setSummaryMsg(res.ok ? "Récap envoyé ✓" : "Échec de l'envoi.");
+    } catch {
+      setSummaryMsg("Erreur réseau.");
+    } finally {
+      setSummaryLoading(false);
+      setTimeout(() => setSummaryMsg(""), 3500);
+    }
   };
 
   return (
@@ -218,6 +247,51 @@ export default function ProfilePage() {
             <option value="light">Clair</option>
             <option value="dark">Sombre</option>
           </Select>
+        </CardContent>
+      </Card>
+
+      {/* Alerts & emails */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Alertes & emails</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Rappels & alertes par email
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Échéances récurrentes et dépassements de budget, un récap quotidien.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={toggleAlerts}
+              disabled={alertsSaving}
+              aria-label="Activer les alertes par email"
+              className={cn(
+                "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60",
+                emailAlerts ? "bg-income" : "bg-muted",
+              )}
+            >
+              <span
+                className={cn(
+                  "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
+                  emailAlerts ? "left-[22px]" : "left-0.5",
+                )}
+              />
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button variant="secondary" onClick={sendSummary} loading={summaryLoading}>
+              <Mail className="h-4 w-4" />
+              M’envoyer mon récap du mois
+            </Button>
+            {summaryMsg && (
+              <span className="text-sm text-muted-foreground">{summaryMsg}</span>
+            )}
+          </div>
         </CardContent>
       </Card>
 
