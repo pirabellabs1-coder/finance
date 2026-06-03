@@ -5,18 +5,21 @@ let _pool: Pool | null = null;
 /** Lazily-created connection pool. Works with Supabase / any Postgres. */
 export function db(): Pool {
   if (!_pool) {
-    const connectionString =
+    const raw =
       process.env.POSTGRES_URL ||
       process.env.DATABASE_URL ||
       process.env.POSTGRES_PRISMA_URL ||
       process.env.POSTGRES_URL_NON_POOLING;
+    const disableSsl = raw ? /sslmode=disable/i.test(raw) : false;
+    // Strip sslmode from the URL so our explicit ssl config is used. Supabase's
+    // pooler presents a self-signed cert, which 'sslmode=require' (now treated
+    // as verify-full by pg) would reject with SELF_SIGNED_CERT_IN_CHAIN.
+    const connectionString = raw
+      ? raw.replace(/([?&])sslmode=[^&]*/gi, "$1").replace(/[?&]+$/g, "")
+      : undefined;
     _pool = new Pool({
       connectionString,
-      // Supabase (and most hosted Postgres) require TLS.
-      ssl:
-        connectionString && /sslmode=disable/.test(connectionString)
-          ? false
-          : { rejectUnauthorized: false },
+      ssl: disableSsl ? false : { rejectUnauthorized: false },
       max: 3,
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 15_000,
