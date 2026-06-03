@@ -1,14 +1,12 @@
 # 💰 Finance — Gestion financière personnelle
 
-Application web de gestion de finances personnelles (MVP Phase 1).
-Suivez vos **revenus** et **dépenses**, visualisez vos **statistiques** et gardez
-le contrôle de votre budget — le tout dans une interface moderne, responsive et
-avec un mode sombre/clair.
+Application web de gestion de finances personnelles avec **vrais comptes**,
+synchronisation multi-appareils et **emails** (reset de mot de passe, rappels,
+alertes budget). Suivez vos **revenus**/**dépenses**, **budgets**, **objectifs**
+et **récurrences** dans une interface moderne, responsive, sombre/clair.
 
-Construite avec **Next.js (App Router) + TypeScript + Tailwind CSS**.
-Aucune configuration externe n'est nécessaire : les données sont stockées
-**localement dans le navigateur**, derrière une couche d'accès propre conçue
-pour brancher **Firebase ou une API** plus tard sans toucher à l'interface.
+Stack : **Next.js (App Router) + TypeScript + Tailwind**, **Vercel Postgres**
+(données + auth serveur), **Resend** (emails), sessions **JWT** par cookie.
 
 ---
 
@@ -16,10 +14,14 @@ pour brancher **Firebase ou une API** plus tard sans toucher à l'interface.
 
 ```bash
 npm install
+# Renseignez les variables d'environnement (voir plus bas), puis :
 npm run dev
 ```
 
-Puis ouvrez **http://localhost:3000** et créez votre compte pour commencer.
+Puis ouvrez **http://localhost:3000** et créez votre compte.
+
+> En local, récupérez les variables depuis Vercel avec `vercel env pull .env.local`
+> (nécessite une base Postgres connectée au projet).
 
 Autres commandes :
 
@@ -27,6 +29,24 @@ Autres commandes :
 npm run build   # build de production (vérifie aussi les types)
 npm start       # sert le build de production
 ```
+
+---
+
+## ⚙️ Variables d'environnement
+
+| Variable | Rôle |
+| --- | --- |
+| `POSTGRES_URL` | Connexion Vercel Postgres (ajoutée automatiquement en créant la base dans Vercel → Storage). |
+| `AUTH_SECRET` | Secret de signature des sessions/jetons (chaîne aléatoire). |
+| `RESEND_API_KEY` | Clé API Resend pour l'envoi des emails. |
+| `EMAIL_FROM` | Expéditeur, ex. `Finance <noreply@votre-domaine.com>` (domaine à vérifier dans Resend). |
+| `CRON_SECRET` | Protège l'endpoint cron `/api/cron/reminders`. |
+| `APP_URL` | URL publique de l'app (liens dans les emails). |
+
+Le schéma de base de données se crée automatiquement à la première requête
+(`src/server/db.ts`). Les **emails** (`src/server/email.ts`) couvrent le reset de
+mot de passe, les rappels d'échéances et les alertes de budget ; un **cron Vercel
+quotidien** (`vercel.json` → `/api/cron/reminders`) envoie les rappels/alertes.
 
 ---
 
@@ -60,11 +80,12 @@ en SVG/CSS** — aucune dépendance de graphiques, bundle léger.
 
 ## 🧱 Stack technique
 
-- **Next.js 15** (App Router) + **React 19**
+- **Next.js 15** (App Router, Route Handlers) + **React 19**
 - **TypeScript** (strict)
 - **Tailwind CSS 3** (thème par variables CSS)
-- **lucide-react** (icônes)
-- Stockage : **localStorage** (via une couche `repositories` remplaçable)
+- **Vercel Postgres** (`@vercel/postgres`) — données + comptes
+- **Resend** — envoi d'emails · **jose** — sessions JWT (cookie httpOnly)
+- **scrypt** (Node) — hachage des mots de passe · **lucide-react** — icônes
 
 ---
 
@@ -88,53 +109,43 @@ src/
 │  ├─ AuthContext.tsx         # État d'authentification
 │  ├─ DataContext.tsx         # Transactions de l'utilisateur courant (CRUD)
 │  └─ PlanningContext.tsx     # Budgets, objectifs, récurrences, notifications
-└─ lib/
-   ├─ types.ts                # Types du domaine
-   ├─ constants.ts            # Catégories, moyens de paiement, devises
-   ├─ stats.ts                # Agrégations & calculs de dates
-   ├─ format.ts               # Formatage monnaie / dates / %
-   ├─ crypto.ts               # Hachage de mot de passe (démo locale)
-   ├─ storage.ts              # Wrapper localStorage (SSR-safe)
-   ├─ export.ts               # Export CSV + impression PDF
-   └─ repositories.ts         # ⭐ Point de bascule du backend
+├─ lib/
+│  ├─ types.ts                # Types du domaine
+│  ├─ constants.ts            # Catégories, moyens de paiement, devises
+│  ├─ stats.ts                # Agrégations & calculs de dates
+│  ├─ format.ts               # Formatage monnaie / dates / %
+│  ├─ storage.ts              # localStorage (état lu/non-lu des notifs)
+│  ├─ export.ts               # Export CSV + impression PDF
+│  └─ repositories.ts         # Client API (fetch) — point d'accès unique
+├─ server/                    # Code serveur (jamais envoyé au navigateur)
+│  ├─ db.ts                   # Pool Postgres + schéma auto-créé
+│  ├─ users.ts · data.ts      # Requêtes SQL + mappers
+│  ├─ password.ts · session.ts # scrypt + sessions JWT (cookie)
+│  └─ email.ts                # Resend + templates d'emails
+└─ app/api/                   # Route Handlers : auth, transactions, budget,
+                              #   goals, recurring, email/summary, cron/reminders
 ```
 
 ---
 
-## 🔌 Changer de backend (Firebase / API)
+## 🔌 Architecture
 
-Toute l'application communique avec des *repositories* — `auth`, `transactions`,
-`budgets`, `goals`, `recurring`, `notificationState` — définis dans
-[`src/lib/repositories.ts`](src/lib/repositories.ts) via des interfaces typées.
-**L'UI ne touche jamais localStorage directement.**
-
-Pour passer à un vrai backend, il suffit d'implémenter ces interfaces et de
-remplacer les dernières lignes du fichier :
-
-```ts
-// Aujourd'hui (démo locale) :
-export const auth: AuthRepository = new LocalAuthRepository();
-export const transactions: TransactionRepository = new LocalTransactionRepository();
-
-// Demain (Firebase, par exemple) :
-import { FirebaseAuthRepository, FirestoreTransactionRepository } from "./repositories.firebase";
-export const auth: AuthRepository = new FirebaseAuthRepository();
-export const transactions: TransactionRepository = new FirestoreTransactionRepository();
-```
-
-Toutes les méthodes sont déjà `async`, donc le passage à un backend réseau (REST,
-GraphQL, Firestore temps réel) ne demande **aucun changement dans les composants**.
+L'UI parle à des *repositories* (`auth`, `transactions`, `budgets`, `goals`,
+`recurring`) définis dans [`src/lib/repositories.ts`](src/lib/repositories.ts),
+qui appellent les **Route Handlers** sous `src/app/api/*`. Côté serveur
+(`src/server/*`), ces routes lisent/écrivent dans **Vercel Postgres**, gèrent les
+**sessions JWT** (cookie httpOnly) et envoient les **emails** via Resend. Les
+méthodes étant toutes `async`, l'interface n'a pas bougé depuis le prototype.
 
 ---
 
-## 🔒 Note de sécurité
+## 🔒 Sécurité
 
-L'authentification actuelle est une **démo côté client** : les comptes et le
-hachage des mots de passe vivent dans le navigateur (voir
-[`src/lib/crypto.ts`](src/lib/crypto.ts)). Cela évite de stocker des mots de
-passe en clair, **mais ce n'est pas une sécurité réelle**. En production,
-confiez l'authentification à un vrai backend (Firebase Auth, JWT côté serveur…)
-en suivant la section ci-dessus.
+- Mots de passe hachés côté serveur (**scrypt**), jamais stockés en clair.
+- Sessions signées (**JWT**, `AUTH_SECRET`) en cookie **httpOnly / secure**.
+- Reset de mot de passe par **jeton signé à usage unique** (expire en 1 h).
+- Endpoint cron protégé par `CRON_SECRET`.
+- Tous les secrets en variables d'environnement (jamais commités).
 
 ---
 
@@ -145,9 +156,11 @@ en suivant la section ci-dessus.
 - **Phase 2 ✅** — Limite de dépense mensuelle + budgets par catégorie,
   centre de notifications, objectifs d'épargne, transactions récurrentes,
   export CSV / Excel / PDF.
+- **Backend ✅** — Vercel Postgres (vrais comptes + synchronisation
+  multi-appareils), reset de mot de passe par email, rappels & alertes par email
+  (cron quotidien), récap mensuel.
 - **Phase 3** — Suggestions IA (dépenses inutiles, prévisions, conseils
-  d'économie), OCR des reçus, connexion bancaire, synchronisation temps réel
-  multi-appareils (Firebase/API).
+  d'économie), OCR des reçus, connexion bancaire.
 
-L'architecture (repositories, agrégations, point de bascule du backend) a été
-pensée pour accueillir ces évolutions.
+L'architecture (repositories, routes API, base Postgres) a été pensée pour
+accueillir ces évolutions.
