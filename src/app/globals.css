@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+
+    --background: 250 250 250;
+    --foreground: 23 23 23;
+
+    --card: 255 255 255;
+    --card-foreground: 23 23 23;
+
+    --muted: 245 245 245;
+    --muted-foreground: 115 115 115;
+
+    --border: 229 229 229;
+    --input: 229 229 229;
+    --ring: 234 88 12;
+
+    --primary: 234 88 12;
+    --primary-foreground: 255 255 255;
+
+    --income: 22 163 74;
+    --expense: 225 29 72;
+  }
+
+  .dark {
+    --background: 10 10 10;
+    --foreground: 250 250 250;
+
+    --card: 23 23 23;
+    --card-foreground: 250 250 250;
+
+    --muted: 38 38 38;
+    --muted-foreground: 163 163 163;
+
+    --border: 38 38 38;
+    --input: 38 38 38;
+    --ring: 249 115 22;
+
+    --primary: 249 115 22;
+    --primary-foreground: 255 255 255;
+
+    --income: 52 211 153;
+    --expense: 251 113 133;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Tabular numbers for money values */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  /* Subtle, theme-aware scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--border));
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* Remove number input spinners for cleaner money fields */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
