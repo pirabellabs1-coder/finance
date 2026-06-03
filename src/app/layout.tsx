@@ -2,11 +2,19 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { AuthProvider } from "@/context/AuthContext";
+import { PwaManager } from "@/components/pwa/PwaManager";
 
 export const metadata: Metadata = {
   title: "Finance — Gestion financière personnelle",
   description:
     "Suivez vos revenus et dépenses, visualisez vos statistiques et gardez le contrôle de votre budget.",
+  applicationName: "GoScale Finance",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Finance" },
+  icons: {
+    icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png" }],
+  },
 };
 
 export const viewport: Viewport = {
@@ -34,6 +42,7 @@ export default function RootLayout({
       <body className="font-sans">
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
+          <PwaManager />
         </ThemeProvider>
       </body>
     </html>

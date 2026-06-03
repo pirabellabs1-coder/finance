@@ -1,4 +1,11 @@
 import { readJSON, STORAGE_KEYS, writeJSON } from "./storage";
+import {
+  LocalAuthRepository,
+  LocalBudgetRepository,
+  LocalGoalRepository,
+  LocalRecurringRepository,
+  LocalTransactionRepository,
+} from "./repositories.local";
 import type {
   Budget,
   ProfilePatch,
@@ -226,10 +233,24 @@ class LocalNotificationStateRepository implements NotificationStateRepository {
 //  implementations below — the interfaces above stay identical.
 // ===========================================================================
 
-export const auth: AuthRepository = new ApiAuthRepository();
-export const transactions: TransactionRepository = new ApiTransactionRepository();
-export const budgets: BudgetRepository = new ApiBudgetRepository();
-export const goals: GoalRepository = new ApiGoalRepository();
-export const recurring: RecurringRepository = new ApiRecurringRepository();
+// Set NEXT_PUBLIC_USE_API=1 (with a Postgres DB + server env) to use the real
+// backend. Unset/anything-else → fully client-side localStorage mode (no DB).
+const USE_API = process.env.NEXT_PUBLIC_USE_API === "1";
+
+export const auth: AuthRepository = USE_API
+  ? new ApiAuthRepository()
+  : new LocalAuthRepository();
+export const transactions: TransactionRepository = USE_API
+  ? new ApiTransactionRepository()
+  : new LocalTransactionRepository();
+export const budgets: BudgetRepository = USE_API
+  ? new ApiBudgetRepository()
+  : new LocalBudgetRepository();
+export const goals: GoalRepository = USE_API
+  ? new ApiGoalRepository()
+  : new LocalGoalRepository();
+export const recurring: RecurringRepository = USE_API
+  ? new ApiRecurringRepository()
+  : new LocalRecurringRepository();
 export const notificationState: NotificationStateRepository =
   new LocalNotificationStateRepository();
